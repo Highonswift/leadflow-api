@@ -13,23 +13,88 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model User {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  email     String   @unique
-  name      String?
-  role      Role     @default(USER)
-  posts     Post[]
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(ADMIN)
+  avatar        String?        // optional profile image
+  status        String         @default("active")
+  conversations Conversation[]
+  assistants    Assistant[]    // user can have multiple assistants
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  published Boolean  @default(false)
-  title     String   @db.VarChar(255)
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  Int?
+model Assistant {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  type        String   @default("voice") // voice, chat
+  voice       String? // voice config (if voice bot)
+  language    String   @default("en-US")
+  status      String   @default("active") // active, inactive
+  embedCode   String? // script to embed on website
+  apiKey      String   @unique
+  settings    Json? // store custom settings like tone, personality, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Conversation {
+  id            Int       @id @default(autoincrement())
+  userId        Int?
+  user          User?     @relation(fields: [userId], references: [id])
+  sessionId     String?   // Unique ID per conversation session
+  customerName  String
+  customerEmail String?
+  source        String      // e.g., "call", "chat", "whatsapp"
+  type          String      @default("chat") // chat, voice, or mixed
+  status        String      @default("open") // open, closed, converted
+  summary       String?     // short summary after conversation ends
+  endReason     String?     // why it ended: completed, dropped, converted
+  messages      Message[]
+  callLogs      CallLog[]
+  lead          Lead?
+  startedAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         String       // "customer" or "agent"
+  content        String
+  messageType    String       @default("text") // text, audio, file
+  timestamp      DateTime     @default(now())
+}
+
+model CallLog {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  duration       Int          // in seconds
+  cost           Float        @default(0)
+  success        Boolean      @default(false)
+  startedAt      DateTime     @default(now())
+  endedAt        DateTime?
+}
+
+model Lead {
+  id             Int          @id @default(autoincrement())
+  conversationId Int          @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  name           String
+  email          String?
+  phone          String?
+  status         String       @default("new") // new, contacted, qualified, closed
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 enum Role {
