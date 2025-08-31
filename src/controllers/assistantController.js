@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from '../config/db.js'; // your Prisma client instance
 import crypto from "crypto";
 
-const prisma = new PrismaClient();
 
 // Generate unique API Key
 const generateApiKey = () => crypto.randomBytes(32).toString("hex");
